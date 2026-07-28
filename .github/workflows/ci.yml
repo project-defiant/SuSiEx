@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Make tests script executable
+        run: chmod +x ./run_tests.sh
+
+      - name: Run C++ test suite
+        run: ./run_tests.sh
+        env:
+          CI: true
