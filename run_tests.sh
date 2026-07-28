@@ -28,7 +28,6 @@ echo "Running susiex run test..."
 ./tests_susiex_run
 
 # compile and run validation unit test (direct validator tests)
-
 echo "Compiling validation unit test..."
 g++ -std=c++11 -I src src/tests_validation_unit.cpp src/validation.cpp src/data.cpp -o tests_validation_unit
 
@@ -39,8 +38,19 @@ fi
 echo "Running validation unit test..."
 ./tests_validation_unit
 
-# compile and run validation tests
+# compile and run API error-code test
 
+echo "Compiling API error-code test..."
+g++ -std=c++11 -fopenmp -I src src/tests_api_error_codes.cpp src/api.cpp src/memory_loader.cpp src/validation.cpp src/data.cpp src/model.cpp -o tests_api_error_codes
+
+if [ $? -ne 0 ]; then
+    echo "Compile API error-code test failed"; exit 1
+fi
+
+echo "Running API error-code test..."
+./tests_api_error_codes
+
+# compile and run validation tests
 echo "Compiling validation diag test..."
 g++ -std=c++11 -fopenmp -I src src/tests_validation_ld_diag.cpp src/memory_loader.cpp src/validation.cpp src/data.cpp src/model.cpp -o tests_validation_ld_diag
 
