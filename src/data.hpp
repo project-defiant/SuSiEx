@@ -503,19 +503,37 @@ public:
 		if(npop)
 		{
 			if(nsnp)
+			{
 				for(int i = 0 ; i < npop; ++i)
+				{
+					if(ld[i] == nullptr) continue;
 					for(int j = 0 ; j < nsnp; ++j)
-						delete []ld[i][j];
-			delete []tau_sq;
-			delete []beta;
-			delete []pval;
-			delete []mkIdx;
-			delete []ind;
-			delete []ld;
+					{
+						if(ld[i][j] != nullptr)
+							delete []ld[i][j];
+					}
+				}
+			}
+			if(tau_sq) delete []tau_sq;
+			if(beta) delete []beta;
+			if(pval) delete []pval;
+			if(mkIdx) delete []mkIdx;
+			if(ind) delete []ind;
+			if(ld) delete []ld;
 		}
 	}
 
 	void load(const softpar& par);
+
+	// Load dataset from in-memory arrays. Caller must set the global `npop` to the number of populations
+	// before constructing the dataset instance (the constructor uses `npop` for initial allocations).
+	void load_from_memory(const softpar& par,
+					int _nsnp,
+					const double* beta_in,    // length npop * nsnp, row-major (pop major)
+					const double* pval_in,    // length npop * nsnp
+					const char* ind_in,       // length npop * nsnp
+					LDTYPE*** ld_in,         // [npop][nsnp][nsnp] dense matrices
+					const int* mkIdx_in);    // length nsnp
 
 	//pop
 	double *tau_sq;
