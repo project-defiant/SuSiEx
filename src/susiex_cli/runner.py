@@ -18,6 +18,14 @@ def fit(
     mk_idx: np.ndarray,
     *,
     n_gwas: list[int],
+    n_sig: int = 5,
+    max_iter: int = 100,
+    level: float = 0.95,
+    min_purity: float = 0.5,
+    pth: float = 1e-5,
+    tol: float = 1e-4,
+    nthreads: int = 1,
+    mult_step: bool = False,
 ) -> dict[str, Any]:
     """Run SuSiEx through the native extension using validated NumPy arrays.
 
@@ -26,7 +34,17 @@ def fit(
     dataset adapters will be added separately once the pipeline schema is
     finalized.
     """
-    parameters = FitParameters(n_gwas=n_gwas)
+    parameters = FitParameters(
+        n_gwas=n_gwas,
+        n_sig=n_sig,
+        max_iter=max_iter,
+        level=level,
+        min_purity=min_purity,
+        pth=pth,
+        tol=tol,
+        nthreads=nthreads,
+        mult_step=mult_step,
+    )
     arrays = {
         "beta": np.asarray(beta, dtype=np.float64),
         "pval": np.asarray(pval, dtype=np.float64),
@@ -48,6 +66,14 @@ def fit(
         arrays["ld"],
         arrays["mk_idx"],
         parameters.n_gwas,
+        parameters.n_sig,
+        parameters.max_iter,
+        parameters.level,
+        parameters.min_purity,
+        parameters.pth,
+        parameters.tol,
+        parameters.nthreads,
+        parameters.mult_step,
     )
 
 

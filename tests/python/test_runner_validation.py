@@ -47,6 +47,14 @@ def test_fit_parameters_reject_invalid_sample_sizes(sample_sizes) -> None:
         FitParameters(n_gwas=sample_sizes)
 
 
+def test_fit_parameters_exposes_native_method_controls() -> None:
+    parameters = FitParameters(n_gwas=[100], n_sig=7, max_iter=250, level=0.9)
+
+    assert parameters.n_sig == 7
+    assert parameters.max_iter == 250
+    assert parameters.level == 0.9
+
+
 def test_application_input_requires_pipeline_contract_paths(tmp_path: Path) -> None:
     values = dict(
         run_id="study-a,study-b",
