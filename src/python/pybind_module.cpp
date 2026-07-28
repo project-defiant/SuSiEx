@@ -11,7 +11,15 @@ py::dict susiex_pyfit(py::array_t<double> beta_in,
                  py::array_t<uint8_t> ind_in,
                  py::array_t<float> ld_in,
                  py::array_t<int> mkIdx_in,
-                 std::vector<int> n_gwas = std::vector<int>())
+                 std::vector<int> n_gwas = std::vector<int>(),
+                 int n_sig = 5,
+                 int max_iter = 100,
+                 double level = 0.95,
+                 double min_purity = 0.5,
+                 double pth = 1e-5,
+                 double tol = 1e-4,
+                 int nthreads = 1,
+                 bool mult_step = false)
 {
     // Expect shapes: beta (npop, nsnp), pval (npop, nsnp), ind (npop, nsnp), ld (npop, nsnp, nsnp), mkIdx (nsnp,)
     if(beta_in.ndim() != 2 || pval_in.ndim() != 2 || ind_in.ndim() != 2 || ld_in.ndim() != 3 || mkIdx_in.ndim() != 1)
@@ -78,6 +86,14 @@ py::dict susiex_pyfit(py::array_t<double> beta_in,
         par.n_gwas.clear();
         for(int i = 0; i < npop; ++i) par.n_gwas.push_back(10000);
     }
+    par.n_sig = n_sig;
+    par.max_iter = max_iter;
+    par.level = level;
+    par.min_purity = min_purity;
+    par.pth = pth;
+    par.tol = tol;
+    par.nthreads = nthreads;
+    par.mult_step = mult_step;
 
     ms_result out{};
     int rc = susiex_multisusie_fit(npop, nsnp, beta.data(), pval.data(), ind.data(), ld, mkIdx.data(), &par, &out);
@@ -131,6 +147,32 @@ py::dict susiex_pyfit(py::array_t<double> beta_in,
     auto lbf_buf = lbf.mutable_unchecked<1>();
     for(int l = 0; l < L; ++l) lbf_buf(l) = out.lbf[l];
 
+    py::array_t<double> component_purity({(size_t)L});
+    py::array_t<double> component_min_p_values({(size_t)L});
+    py::array_t<double> component_min_p_values_by_population({(size_t)L, (size_t)K});
+    py::array_t<double> population_causal_prob({(size_t)L, (size_t)K});
+    py::array_t<double> logbf_by_population({(size_t)L, (size_t)K, (size_t)P});
+    py::array_t<int> component_is_filtered({(size_t)L});
+    auto purity_buf = component_purity.mutable_unchecked<1>();
+    auto min_p_buf = component_min_p_values.mutable_unchecked<1>();
+    auto min_pop_buf = component_min_p_values_by_population.mutable_unchecked<2>();
+    auto causal_buf = population_causal_prob.mutable_unchecked<2>();
+    auto logbf_pop_buf = logbf_by_population.mutable_unchecked<3>();
+    auto filtered_buf = component_is_filtered.mutable_unchecked<1>();
+    for(int l = 0; l < L; ++l)
+    {
+        purity_buf(l) = out.cs_purity[l];
+        min_p_buf(l) = out.cs_min_p[l];
+        filtered_buf(l) = out.cs_filtered[l];
+        for(int k = 0; k < K; ++k)
+        {
+            min_pop_buf(l, k) = out.cs_min_p_by_population[(size_t)l * K + k];
+            causal_buf(l, k) = out.population_causal_prob[(size_t)l * K + k];
+            for(int p = 0; p < P; ++p)
+                logbf_pop_buf(l, k, p) = out.logbf_by_population[(size_t)l * K * P + (size_t)k * P + p];
+        }
+    }
+
     // cs: list of arrays
     py::list cs_list;
     int pos = 0;
@@ -148,8 +190,14 @@ py::dict susiex_pyfit(py::array_t<double> beta_in,
     res["pip"] = pip;
     res["mu"] = mu;
     res["lbf"] = lbf;
+    res["component_purity"] = component_purity;
+    res["component_min_p_values"] = component_min_p_values;
+    res["component_min_p_values_by_population"] = component_min_p_values_by_population;
+    res["component_is_filtered"] = component_is_filtered;
+    res["population_causal_prob"] = population_causal_prob;
+    res["logbf_by_population"] = logbf_by_population;
     res["cs"] = cs_list;
-    res["converged"] = true;
+    res["converged"] = out.converged != 0;
 
     ms_result_free(&out);
     return res;
@@ -157,5 +205,22 @@ py::dict susiex_pyfit(py::array_t<double> beta_in,
 
 PYBIND11_MODULE(susiex_python, m) {
     m.doc() = "Pybind11 wrapper for SuSiEx minimal C API";
-    m.def("susiex_pyfit", &susiex_pyfit, py::arg("beta"), py::arg("pval"), py::arg("ind"), py::arg("ld"), py::arg("mkIdx"), py::arg("n_gwas") = std::vector<int>());
+    m.def(
+        "susiex_pyfit",
+        &susiex_pyfit,
+        py::arg("beta"),
+        py::arg("pval"),
+        py::arg("ind"),
+        py::arg("ld"),
+        py::arg("mkIdx"),
+        py::arg("n_gwas") = std::vector<int>(),
+        py::arg("n_sig") = 5,
+        py::arg("max_iter") = 100,
+        py::arg("level") = 0.95,
+        py::arg("min_purity") = 0.5,
+        py::arg("pth") = 1e-5,
+        py::arg("tol") = 1e-4,
+        py::arg("nthreads") = 1,
+        py::arg("mult_step") = false
+    );
 }

@@ -25,6 +25,13 @@ typedef struct {
     double *pip;   // length P
     double *mu;    // length K * L * P, layout: l major then k then p as mu[(l*K + k)*P + p]
     double *lbf;   // length L
+    double *logbf_by_population; // length L * K * P, layout: l major then k then p
+
+    double *cs_purity; // length L
+    double *cs_min_p; // length L
+    double *cs_min_p_by_population; // length L * K, layout: l major then k
+    double *population_causal_prob; // length L * K, layout: l major then k
+    int *cs_filtered; // length L, 1 when the component is filtered
 
     int *cs_counts; // length L
     int *cs_indices; // flattened indices (length sum cs_counts)

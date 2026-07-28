@@ -79,6 +79,7 @@ int susiex::susie_sst_xethn()
 		if(flag == 1)
 			ncs = cal_pip();
 	}
+	fit_status = flag;
 	write_cs(flag);
 	return 0;
 }

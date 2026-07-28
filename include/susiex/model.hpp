@@ -90,7 +90,7 @@ class susiex
 public:
 	susiex(int _npop, int _nsnp, dataset& _dat, const softpar& _par) :\
 			dat(_dat), par(_par), npop(_npop), nsnp(_nsnp), \
-			elbo_old(-std::numeric_limits<double>::infinity()), ncs(0), first(false)
+			elbo_old(-std::numeric_limits<double>::infinity()), ncs(0), fit_status(0), first(false)
 	{
 		if(par.mult_step)
 			nsig = 5;
@@ -199,6 +199,7 @@ public:
 	double *v_sq, *z, *logBF, *mu, *mu_sq, *phi_sq, *w, *maxPopBF, *b_sq_sum;
 
 	int ncs;
+	int fit_status;
 	//CS
 	double *cs_purity, *pip;
 	char *cs_bin;

@@ -22,7 +22,7 @@ class softpar
 {
 public:
 	softpar() : out_dir(""), out_name(""), chr(""), start(0), end(0), level(0.95), \
-	min_purity(0.5), pth(1e-5), tol(1e-4), n_sig(5), max_iter(100), nthreads(1), \
+	min_purity(0.5), pth(1e-5), tol(1e-4), mult_step(false), n_sig(5), max_iter(100), nthreads(1), \
 	key_by(2) {}
 
 	std::vector<int> n_gwas;
