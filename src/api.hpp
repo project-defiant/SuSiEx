@@ -16,6 +16,20 @@ typedef enum {
 // Minimal result struct for now; expand later
 typedef struct {
     int converged;
+    int L;      // number of components (nsig)
+    int ncs;    // number of credible sets
+    int K;      // npop
+    int P;      // nsnp
+
+    double *alpha; // length L * P (alpha[l*P + p])
+    double *pip;   // length P
+    double *mu;    // length K * L * P, layout: l major then k then p as mu[(l*K + k)*P + p]
+    double *lbf;   // length L
+
+    int *cs_counts; // length L
+    int *cs_indices; // flattened indices (length sum cs_counts)
+
+    char *err_msg; // optional null-terminated message (caller freed by ms_result_free)
 } ms_result;
 
 // C API entrypoint: runs susiex using in-memory arrays. Returns ssex_code.

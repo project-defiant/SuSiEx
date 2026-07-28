@@ -89,7 +89,73 @@ int susiex_pyfit(py::array_t<double> beta_in,
     }
     delete [] ld;
 
-    return rc;
+    if(rc != SSEX_OK)
+    {
+        ms_result_free(&out);
+        throw std::runtime_error(std::string("susiex_multisusie_fit failed with code: ") + std::to_string(rc));
+    }
+
+    // map ms_result to Python objects
+    py::dict res;
+    int L = out.L;
+    int K = out.K;
+    int P = out.P;
+
+    // alpha (L, P)
+    py::array_t<double> alpha({(size_t)L, (size_t)P});
+    auto alpha_buf = alpha.mutable_unchecked<2>();
+    for(int l = 0; l < L; ++l)
+        for(int p = 0; p < P; ++p)
+            alpha_buf(l, p) = out.alpha[(size_t)l * P + p];
+
+    // pip (P,)
+    py::array_t<double> pip({(size_t)P});
+    auto pip_buf = pip.mutable_unchecked<1>();
+    for(int p = 0; p < P; ++p) pip_buf(p) = out.pip[p];
+
+    // mu (K, L, P) - out->mu stored as l*(K*P) + k*P + p
+    py::array_t<double> mu({(size_t)K, (size_t)L, (size_t)P});
+    auto mu_buf = mu.mutable_unchecked<3>();
+    for(int l = 0; l < L; ++l)
+        for(int k = 0; k < K; ++k)
+            for(int p = 0; p < P; ++p)
+            {
+                size_t idx = (size_t)l * (K * P) + k * P + p;
+                mu_buf(k, l, p) = out.mu[idx];
+            }
+
+    // lbf
+    py::array_t<double> lbf({(size_t)L});
+    auto lbf_buf = lbf.mutable_unchecked<1>();
+    for(int l = 0; l < L; ++l) lbf_buf(l) = out.lbf[l];
+
+    // cs: list of arrays
+    py::list cs_list;
+    int pos = 0;
+    for(int l = 0; l < L; ++l)
+    {
+        int cnt = out.cs_counts ? out.cs_counts[l] : 0;
+        py::array_t<int> arr({(size_t)cnt});
+        auto arr_buf = arr.mutable_unchecked<1>();
+        for(int j = 0; j < cnt; ++j)
+            arr_buf(j) = out.cs_indices[pos++];
+        cs_list.append(arr);
+    }
+
+    res["alpha"] = alpha;
+    res["pip"] = pip;
+    res["mu"] = mu;
+    res["lbf"] = lbf;
+    res["cs"] = cs_list;
+    res["converged"] = true;
+
+    ms_result_free(&out);
+    return res;
+}
+
+PYBIND11_MODULE(susiex_python, m) {
+    m.doc() = "Pybind11 wrapper for SuSiEx minimal C API";
+    m.def("susiex_pyfit", &susiex_pyfit, py::arg("beta"), py::arg("pval"), py::arg("ind"), py::arg("ld"), py::arg("mkIdx"), py::arg("n_gwas") = std::vector<int>());
 }
 
 PYBIND11_MODULE(susiex_python, m) {
