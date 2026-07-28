@@ -1,7 +1,7 @@
-#include "api.hpp"
-#include "validation.hpp"
-#include "model.hpp"
-#include "data.hpp"
+#include "susiex/api.hpp"
+#include "susiex/validation.hpp"
+#include "susiex/model.hpp"
+#include "susiex/data.hpp"
 #include <exception>
 #include <new>
 
@@ -17,6 +17,9 @@ int susiex_multisusie_fit(int npop_in,
                           const softpar* par_in,
                           ms_result* out)
 {
+    if(out)
+        *out = ms_result{};
+
     if(npop_in <= 0 || nsnp <= 0 || !beta || !pval || !ind || !ld || !mkIdx || !par_in)
         return SSEX_INVALID_ARGS;
 
@@ -79,7 +82,7 @@ int susiex_multisusie_fit(int npop_in,
             int total = 0;
             for(int l = 0; l < L; ++l)
             {
-                if(!model.csset[l].fltOut)
+                if(l < static_cast<int>(model.csset.size()) && !model.csset[l].fltOut)
                     out->cs_counts[l] = (int)model.csset[l].idx.size();
                 else
                     out->cs_counts[l] = 0;
@@ -90,8 +93,10 @@ int susiex_multisusie_fit(int npop_in,
             {
                 out->cs_indices = new int[total];
                 int pos = 0;
-                for(int l = 0; l < L; ++l)
+                for(int l = 0; l < L && l < static_cast<int>(model.csset.size()); ++l)
                 {
+                    if(model.csset[l].fltOut)
+                        continue;
                     for(size_t j = 0; j < model.csset[l].idx.size(); ++j)
                     {
                         out->cs_indices[pos++] = model.csset[l].idx[j];

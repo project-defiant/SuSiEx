@@ -6,7 +6,7 @@
  */
 
 
-# include "model.hpp"
+# include "susiex/model.hpp"
 
 # include <cstring>
 # include <algorithm>

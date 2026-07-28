@@ -1,0 +1,9 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.0
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        files: ^(src/susiex_cli|tests/python)/.*\.py$
+      - id: ruff-format
+        files: ^(src/susiex_cli|tests/python)/.*\.py$

@@ -1,5 +1,5 @@
-#include "data.hpp"
-#include "validation.hpp"
+#include "susiex/data.hpp"
+#include "susiex/validation.hpp"
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
@@ -54,7 +54,7 @@ void dataset::load_from_memory(const softpar & par,
     }
 
     // allocate and copy LD matrices
-    ld = new LDTYPE**[npop];
+    ld = new LDTYPE**[npop]();
 
     // validate using reusable validator
     std::string verr;

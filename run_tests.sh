@@ -1,80 +1,52 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
-echo "Compiling memory loader test..."
-g++ -std=c++11 -I src src/tests_memory_loader.cpp src/memory_loader.cpp src/validation.cpp src/data.cpp -o tests_memory_loader
+BUILD_DIR="${TMPDIR:-/tmp}/susiex-tests"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+mkdir -p "$BUILD_DIR"
 
-if [ $? -ne 0 ]; then
-    echo "Compile failed"; exit 1
-fi
+compile_and_run() {
+    local name="$1"
+    shift
+    echo "Compiling ${name}..."
+    g++ "$@" -o "$BUILD_DIR/$name"
+    echo "Running ${name}..."
+    "$BUILD_DIR/$name"
+}
 
-echo "Running memory loader test..."
-./tests_memory_loader
+COMMON=("-std=c++11" "-I" "$ROOT_DIR/include")
+OPENMP=("-fopenmp")
+NATIVE=("$ROOT_DIR/src/data.cpp" "$ROOT_DIR/src/memory_loader.cpp" "$ROOT_DIR/src/validation.cpp")
+MODEL=("$ROOT_DIR/src/model.cpp")
 
-if [ $? -ne 0 ]; then
-    echo "memory loader test failed"; exit 1
-fi
+compile_and_run tests_memory_loader \
+    "${COMMON[@]}" \
+    "$ROOT_DIR/tests/cpp/tests_memory_loader.cpp" "${NATIVE[@]}"
 
-# compile and run susiex run test
+(
+    cd "$BUILD_DIR"
+    compile_and_run tests_susiex_run \
+        "${COMMON[@]}" "${OPENMP[@]}" \
+        "$ROOT_DIR/tests/cpp/tests_susiex_run.cpp" \
+        "${NATIVE[@]}" "${MODEL[@]}"
+)
 
-echo "Compiling susiex run test..."
-g++ -std=c++11 -fopenmp -I src src/tests_susiex_run.cpp src/memory_loader.cpp src/validation.cpp src/data.cpp src/model.cpp -o tests_susiex_run
+compile_and_run tests_validation_unit \
+    "${COMMON[@]}" \
+    "$ROOT_DIR/tests/cpp/tests_validation_unit.cpp" \
+    "$ROOT_DIR/src/data.cpp" "$ROOT_DIR/src/validation.cpp"
 
-if [ $? -ne 0 ]; then
-    echo "Compile susiex run failed"; exit 1
-fi
+compile_and_run tests_api_error_codes \
+    "${COMMON[@]}" "${OPENMP[@]}" \
+    "$ROOT_DIR/tests/cpp/tests_api_error_codes.cpp" "$ROOT_DIR/src/api.cpp" \
+    "${NATIVE[@]}" "${MODEL[@]}"
 
-echo "Running susiex run test..."
-./tests_susiex_run
+compile_and_run tests_validation_ld_diag \
+    "${COMMON[@]}" "${OPENMP[@]}" \
+    "$ROOT_DIR/tests/cpp/tests_validation_ld_diag.cpp" "${NATIVE[@]}" "${MODEL[@]}"
 
-# compile and run validation unit test (direct validator tests)
-echo "Compiling validation unit test..."
-g++ -std=c++11 -I src src/tests_validation_unit.cpp src/validation.cpp src/data.cpp -o tests_validation_unit
+compile_and_run tests_validation_ld_asymmetry \
+    "${COMMON[@]}" "${OPENMP[@]}" \
+    "$ROOT_DIR/tests/cpp/tests_validation_ld_asymmetry.cpp" "${NATIVE[@]}" "${MODEL[@]}"
 
-if [ $? -ne 0 ]; then
-    echo "Compile validation unit test failed"; exit 1
-fi
-
-echo "Running validation unit test..."
-./tests_validation_unit
-
-# compile and run API error-code test
-
-echo "Compiling API error-code test..."
-g++ -std=c++11 -fopenmp -I src src/tests_api_error_codes.cpp src/api.cpp src/memory_loader.cpp src/validation.cpp src/data.cpp src/model.cpp -o tests_api_error_codes
-
-if [ $? -ne 0 ]; then
-    echo "Compile API error-code test failed"; exit 1
-fi
-
-echo "Running API error-code test..."
-./tests_api_error_codes
-
-# compile and run validation tests
-echo "Compiling validation diag test..."
-g++ -std=c++11 -fopenmp -I src src/tests_validation_ld_diag.cpp src/memory_loader.cpp src/validation.cpp src/data.cpp src/model.cpp -o tests_validation_ld_diag
-
-if [ $? -ne 0 ]; then
-    echo "Compile validation diag test failed"; exit 1
-fi
-
-echo "Running validation diag test (expected to fail)..."
-./tests_validation_ld_diag || true
-
-echo "Validation diag test finished (expected failure)"
-
-# compile and run validation asymmetry test
-
-echo "Compiling validation asymmetry test..."
-g++ -std=c++11 -fopenmp -I src src/tests_validation_ld_asymmetry.cpp src/memory_loader.cpp src/validation.cpp src/data.cpp src/model.cpp -o tests_validation_ld_asymmetry
-
-if [ $? -ne 0 ]; then
-    echo "Compile validation asymmetry test failed"; exit 1
-fi
-
-echo "Running validation asymmetry test (expected to fail)..."
-./tests_validation_ld_asymmetry || true
-
-echo "Validation asymmetry test finished (expected failure)"
-
-echo "All tests finished"
+echo "All native tests passed"

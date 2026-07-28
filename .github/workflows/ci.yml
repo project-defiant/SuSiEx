@@ -4,65 +4,58 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  build:
-    name: Build and test
+  native:
+    name: Native C++ tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y build-essential
+      - run: bash run_tests.sh
 
-      - name: Install build tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential
-
-      - name: Make tests script executable
-        run: chmod +x ./run_tests.sh
-
-      - name: Run C++ test suite
-        run: ./run_tests.sh
-        env:
-          CI: true
-
-  python-build:
-    name: Build Python extension and run Python tests
+  python:
+    name: Python tests and type check
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: build
-
+    needs: native
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
         with:
-          python-version: '3.10'
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --frozen --extra test
+      - run: uv run --frozen pytest -q
+      - run: uv run --frozen ty check src/susiex_cli --output-format=github
 
-      - name: Install system build deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential python3-dev
+  lint:
+    name: Lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+      - run: uv sync --frozen --extra test
+      - run: uv run --frozen ruff check src/susiex_cli tests/python
+      - run: uv run --frozen ruff format --check src/susiex_cli tests/python
 
-      - name: Create venv
-        run: python -m venv .venv && source .venv/bin/activate && python -m pip install --upgrade pip
-
-      - name: Install Python deps
-        run: |
-          source .venv/bin/activate
-          pip install pybind11 numpy pytest
-
-      - name: Build and install extension
-        run: |
-          source .venv/bin/activate
-          pip install .
-
-      - name: Run Python tests
-        run: |
-          source .venv/bin/activate
-          pytest -q tests/python
-        env:
-          CI: true
+  container:
+    name: Container smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: susiex:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - run: docker run --rm susiex:ci --help
