@@ -10,6 +10,7 @@ def test_cli_writes_summary_to_nested_output(valid_fit_arrays, tmp_path, monkeyp
     monkeypatch.chdir(tmp_path)
     input_dir = tmp_path / "inputs"
     output = tmp_path / "results" / "fit.json"
+    stats_output = tmp_path / "results" / "stats.json"
     input_dir.mkdir()
     paths = {}
     for name, values in valid_fit_arrays.items():
@@ -34,6 +35,12 @@ def test_cli_writes_summary_to_nested_output(valid_fit_arrays, tmp_path, monkeyp
             "10000",
             "--output",
             str(output),
+            "--run-id",
+            "RUN_A",
+            "--fine-mapping-locus-set-id",
+            "LOCUS_A",
+            "--stats-output",
+            str(stats_output),
         ],
     )
 
@@ -45,6 +52,9 @@ def test_cli_writes_summary_to_nested_output(valid_fit_arrays, tmp_path, monkeyp
     assert summary["n_variants"] == 5
     assert len(summary["credible_set_sizes"]) == 5
     assert summary["credible_set_sizes"][0] > 0
+    stats = json.loads(stats_output.read_text())
+    assert stats["status"] == "SUCCESS"
+    assert stats["runId"] == "RUN_A"
 
 
 def test_cli_reports_invalid_sample_size(valid_fit_arrays, tmp_path):

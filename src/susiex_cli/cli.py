@@ -11,6 +11,7 @@ import typer
 from loguru import logger
 
 from .runner import fit
+from .stats import SuSiExStats, stats_from_result, write_stats
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -26,6 +27,9 @@ def run(
     output: Path = typer.Option(
         ..., help="JSON output for the native result metadata."
     ),
+    run_id: str = typer.Option("array-run"),
+    fine_mapping_locus_set_id: str = typer.Option("array-locus"),
+    stats_output: Path | None = typer.Option(None),
 ) -> None:
     """Run SuSiEx from NumPy arrays; dataset adapters are a separate layer."""
     try:
@@ -38,11 +42,30 @@ def run(
             n_gwas=[int(value) for value in n_gwas.split(",")],
         )
     except (OSError, ValueError, RuntimeError) as error:
+        if stats_output is not None:
+            write_stats(
+                stats_output,
+                SuSiExStats(
+                    runId=run_id,
+                    fineMappingLocusSetId=fine_mapping_locus_set_id,
+                    status="FAILED",
+                    reason=str(error),
+                ),
+            )
         logger.error("SuSiEx run failed: {}", error)
         raise typer.Exit(code=1) from error
 
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(_summary(result), sort_keys=True) + "\n")
+    if stats_output is not None:
+        write_stats(
+            stats_output,
+            stats_from_result(
+                result,
+                run_id=run_id,
+                fine_mapping_locus_set_id=fine_mapping_locus_set_id,
+            ),
+        )
 
 
 def _summary(result: dict[str, object]) -> dict[str, object]:
