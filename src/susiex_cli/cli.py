@@ -12,6 +12,7 @@ from loguru import logger
 
 from .runner import fit
 from .models import ApplicationInput
+from .anndata_output import write_anndata
 from .outputs import study_locus_records, write_study_locus_parquet
 from .preparation import prepare_arrays
 from .stats import SuSiExStats, stats_from_result, write_stats
@@ -79,6 +80,7 @@ def pipeline_run(
     run_id: str = typer.Option(...),
     fine_mapping_locus_set_id: str = typer.Option(...),
     study_locus_output: Path = typer.Option(...),
+    extended_results_output: Path = typer.Option(...),
     stats_output: Path = typer.Option(...),
     n_sig: int = typer.Option(5, min=1),
     max_iter: int = typer.Option(100, min=1),
@@ -98,7 +100,7 @@ def pipeline_run(
         multi_ancestry_pairwise_ld_path=multi_ancestry_pairwise_ld,
         study_metadata_path=study_metadata,
         study_locus_output_path=study_locus_output,
-        extended_results_output_path=study_locus_output.with_suffix(".h5ad"),
+        extended_results_output_path=extended_results_output,
         stats_output_path=stats_output,
     )
     try:
@@ -160,6 +162,13 @@ def pipeline_run(
         locus_end=max(prepared.positions),
     )
     write_study_locus_parquet(records, study_locus_output)
+    write_anndata(
+        result,
+        prepared,
+        run_id=run_id,
+        fine_mapping_locus_set_id=fine_mapping_locus_set_id,
+        output=extended_results_output,
+    )
 
 
 def _summary(result: dict[str, object]) -> dict[str, object]:
