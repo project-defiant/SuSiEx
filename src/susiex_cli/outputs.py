@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Any
 
 import numpy as np
+import polars as pl
 
 STUDY_LOCUS_COLUMNS = (
     "studyLocusId",
@@ -99,3 +101,12 @@ def study_locus_records(
             }
         )
     return records
+
+
+def write_study_locus_parquet(records: list[dict[str, Any]], output: Path) -> None:
+    """Write shared StudyLocus records as one flat parquet file."""
+
+    if not records:
+        raise ValueError("Cannot write StudyLocus output without records")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    pl.DataFrame(records).write_parquet(output)

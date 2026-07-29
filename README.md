@@ -9,6 +9,7 @@ Python layer provides array validation, logging, and the command-line boundary.
 ```bash
 uv sync --extra test
 uv run susiex \
+  run \
   --beta beta.npy \
   --pval pval.npy \
   --ind ind.npy \

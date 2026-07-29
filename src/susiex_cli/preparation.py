@@ -22,6 +22,9 @@ class PreparedArrays(BaseModel):
     variant_ids: list[str]
     chromosomes: list[str]
     positions: list[int]
+    study_ids: list[str]
+    ancestries: list[str]
+    sample_sizes: list[int]
     beta: np.ndarray
     pval: np.ndarray
     ind: np.ndarray
@@ -70,6 +73,9 @@ def prepare_arrays(inputs: ApplicationInput) -> PreparedArrays:
         variant_ids=variant_ids,
         chromosomes=[str(row["chromosome"]) for row in ordered],
         positions=[int(row["position"]) for row in ordered],
+        study_ids=[str(row["studyId"]) for row in metadata],
+        ancestries=[str(row["ancestry"]) for row in metadata],
+        sample_sizes=[int(row["sampleSize"]) for row in metadata],
         beta=beta,
         pval=pval,
         ind=ind,

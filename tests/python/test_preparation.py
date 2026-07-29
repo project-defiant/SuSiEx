@@ -79,3 +79,5 @@ def test_prepare_arrays_aligns_union_and_missing_population(tmp_path) -> None:
     assert prepared.ind.tolist() == [[1, 1], [0, 1]]
     assert prepared.ld[0].tolist() == [[1.0, 0.25], [0.25, 1.0]]
     assert prepared.ld[1].tolist() == [[0.0, 0.0], [0.0, 1.0]]
+    assert prepared.study_ids == ["STUDY_A", "STUDY_B"]
+    assert prepared.sample_sizes == [1000, 2000]

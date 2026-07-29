@@ -11,6 +11,9 @@ import typer
 from loguru import logger
 
 from .runner import fit
+from .models import ApplicationInput
+from .outputs import study_locus_records, write_study_locus_parquet
+from .preparation import prepare_arrays
 from .stats import SuSiExStats, stats_from_result, write_stats
 
 app = typer.Typer(no_args_is_help=True)
@@ -66,6 +69,97 @@ def run(
                 fine_mapping_locus_set_id=fine_mapping_locus_set_id,
             ),
         )
+
+
+@app.command("pipeline")
+def pipeline_run(
+    fine_mapping_locus_set: Path = typer.Option(..., exists=True, readable=True),
+    multi_ancestry_pairwise_ld: Path = typer.Option(..., exists=True, readable=True),
+    study_metadata: Path = typer.Option(..., exists=True, readable=True),
+    run_id: str = typer.Option(...),
+    fine_mapping_locus_set_id: str = typer.Option(...),
+    study_locus_output: Path = typer.Option(...),
+    stats_output: Path = typer.Option(...),
+    n_sig: int = typer.Option(5, min=1),
+    max_iter: int = typer.Option(100, min=1),
+    level: float = typer.Option(0.95, min=0.000001, max=0.999999),
+    min_purity: float = typer.Option(0.5, min=0, max=1),
+    pth: float = typer.Option(1e-5, min=0.000000000001, max=1),
+    tol: float = typer.Option(1e-4, min=0.000000000001),
+    nthreads: int = typer.Option(1, min=1),
+    mult_step: bool = typer.Option(False),
+) -> None:
+    """Run SuSiEx from pipeline parquet and JSONL inputs."""
+
+    inputs = ApplicationInput(
+        run_id=run_id,
+        fine_mapping_locus_set_id=fine_mapping_locus_set_id,
+        fine_mapping_locus_set_path=fine_mapping_locus_set,
+        multi_ancestry_pairwise_ld_path=multi_ancestry_pairwise_ld,
+        study_metadata_path=study_metadata,
+        study_locus_output_path=study_locus_output,
+        extended_results_output_path=study_locus_output.with_suffix(".h5ad"),
+        stats_output_path=stats_output,
+    )
+    try:
+        prepared = prepare_arrays(inputs)
+        result = fit(
+            prepared.beta,
+            prepared.pval,
+            prepared.ind,
+            prepared.ld,
+            prepared.mk_idx,
+            n_gwas=prepared.sample_sizes,
+            n_sig=n_sig,
+            max_iter=max_iter,
+            level=level,
+            min_purity=min_purity,
+            pth=pth,
+            tol=tol,
+            nthreads=nthreads,
+            mult_step=mult_step,
+        )
+    except (OSError, ValueError, RuntimeError) as error:
+        write_stats(
+            stats_output,
+            SuSiExStats(
+                runId=run_id,
+                fineMappingLocusSetId=fine_mapping_locus_set_id,
+                status="FAILED",
+                reason=str(error),
+            ),
+        )
+        logger.error("SuSiEx pipeline run failed: {}", error)
+        raise typer.Exit(code=1) from error
+
+    stats = stats_from_result(
+        result, run_id=run_id, fine_mapping_locus_set_id=fine_mapping_locus_set_id
+    )
+    write_stats(stats_output, stats)
+    if not bool(result["converged"]):
+        logger.warning("SuSiEx pipeline fit did not converge")
+        return
+
+    variants = [
+        {"variantId": variant_id, "chromosome": chromosome, "position": position}
+        for variant_id, chromosome, position in zip(
+            prepared.variant_ids,
+            prepared.chromosomes,
+            prepared.positions,
+            strict=True,
+        )
+    ]
+    records = study_locus_records(
+        result,
+        variants,
+        run_id=run_id,
+        fine_mapping_locus_set_id=fine_mapping_locus_set_id,
+        study_id="|".join(prepared.study_ids),
+        chromosome=prepared.chromosomes[0],
+        locus_start=min(prepared.positions),
+        locus_end=max(prepared.positions),
+    )
+    write_study_locus_parquet(records, study_locus_output)
 
 
 def _summary(result: dict[str, object]) -> dict[str, object]:
