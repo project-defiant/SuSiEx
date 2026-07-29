@@ -37,4 +37,6 @@ def write_stats(output: Path, stats: SuSiExStats) -> None:
     """Write one deterministic JSON status record."""
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(stats.model_dump(exclude_none=True), sort_keys=True) + "\n")
+    output.write_text(
+        json.dumps(stats.model_dump(exclude_none=True), sort_keys=True) + "\n"
+    )
