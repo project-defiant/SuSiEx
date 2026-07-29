@@ -21,6 +21,7 @@ def test_cli_writes_summary_to_nested_output(valid_fit_arrays, tmp_path, monkeyp
     result = CliRunner().invoke(
         app,
         [
+            "run",
             "--beta",
             str(paths["beta"]),
             "--pval",
@@ -67,6 +68,7 @@ def test_cli_reports_invalid_sample_size(valid_fit_arrays, tmp_path):
     result = CliRunner().invoke(
         app,
         [
+            "run",
             "--beta",
             str(paths["beta"]),
             "--pval",
