@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from typing_extensions import Literal
 
 
 class FitParameters(BaseModel):
@@ -40,6 +41,22 @@ class FitResult(BaseModel):
     n_populations: int = Field(gt=0)
     n_variants: int = Field(gt=0)
     credible_set_sizes: list[int]
+
+
+class SuSiExStats(BaseModel):
+    """Machine-readable status for one SuSiEx application invocation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    runId: str
+    fineMappingLocusSetId: str
+    status: Literal["SUCCESS", "NON_CONVERGED", "FAILED"]
+    converged: bool | None = None
+    nComponents: int | None = None
+    nPopulations: int | None = None
+    nVariants: int | None = None
+    nCredibleSets: int | None = None
+    reason: str | None = None
 
 
 class ApplicationInput(BaseModel):
