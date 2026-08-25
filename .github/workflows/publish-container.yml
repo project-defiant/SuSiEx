@@ -23,7 +23,6 @@ jobs:
               run: |
                   REPO=${GITHUB_REPOSITORY,,}
                   echo "REPO=${REPO}" >> "$GITHUB_OUTPUT"
-                  echo "TAG=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
             - name: Set up QEMU
               uses: docker/setup-qemu-action@v3
@@ -49,10 +48,9 @@ jobs:
                   push: true
                   provenance: false
                   sbom: false
-                  build-args: |
-                      COLLECTOR_VERSION=${{ steps.version.outputs.TAG }}
                   tags: |
-                      ghcr.io/${{ steps.version.outputs.REPO }}/susiex:${{ steps.version.outputs.TAG }}
+                      ghcr.io/${{ steps.version.outputs.REPO }}/susiex:latest
+                      ghcr.io/${{ steps.version.outputs.REPO }}/susiex:${{ github.sha }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
@@ -61,4 +59,3 @@ jobs:
               with:
                   subject-name: ghcr.io/${{ steps.version.outputs.REPO }}/susiex
                   subject-digest: ${{ steps.push.outputs.digest }}
-                  push-to-registry: true
