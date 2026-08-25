@@ -18,11 +18,10 @@ jobs:
             - name: Check out repo
               uses: actions/checkout@v4
 
-            - name: Read version
+            - name: Set version tag
               id: version
               run: |
-                  VERSION=$(grep -m1 -E '^version = "' pyproject.toml | cut -d'"' -f2)
-                  echo "TAG=${VERSION}" >> "$GITHUB_OUTPUT"
+                  echo "TAG=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
             - name: Set up QEMU
               uses: docker/setup-qemu-action@v3
@@ -49,7 +48,6 @@ jobs:
                   build-args: |
                       COLLECTOR_VERSION=${{ steps.version.outputs.TAG }}
                   tags: |
-                      ghcr.io/${{ github.repository }}/susiex:latest
                       ghcr.io/${{ github.repository }}/susiex:${{ steps.version.outputs.TAG }}
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
